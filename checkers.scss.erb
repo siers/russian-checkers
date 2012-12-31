@@ -1,0 +1,52 @@
+#space.checkers {
+  height: 480px;
+  position: relative;
+  background: url(<%= asset_path 'games/checkers/board.png' %>);
+
+  .piece {
+    position: absolute;
+    top: 60px;
+    width: 60px;
+    height: 60px;
+    background: url(<%= asset_path 'games/checkers/pieces.png' %>);
+
+    &.selected {
+      opacity: 0.6;
+    }
+    &.queen.white {
+      background-position: 0 -60px;
+    }
+    &.white {
+      background-position: -60px -60px;
+    }
+    &.queen.black {
+      background-position: 0px 0px;
+    }
+    &.black {
+      background-position: -60px 0px;
+    }
+    &.ghost {
+      background-position: 0px -120px;
+    }
+
+    // Since classes start with numbers, I'll prefix them with 'p'.
+    // For the sake of consistency the letters will be prefixed as well.
+    &.p1  { top: 0px; }
+    &.p2  { top: 60px; }
+    &.p3  { top: 120px; }
+    &.p4  { top: 180px; }
+    &.p5  { top: 240px; }
+    &.p6  { top: 300px; }
+    &.p7  { top: 360px; }
+    &.p8  { top: 420px; }
+
+    &.pa  { left: 420px; }
+    &.pb  { left: 360px; }
+    &.pc  { left: 300px; }
+    &.pd  { left: 240px; }
+    &.pe  { left: 180px; }
+    &.pf  { left: 120px; }
+    &.pg  { left: 60px; }
+    &.ph  { left: 0px; }
+  }
+}

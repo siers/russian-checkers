@@ -1,0 +1,94 @@
+BLACK   = false
+WHITE   = true
+REGULAR = false
+QUEEN   = true
+
+# This is a mixin and rules /logically/ actually extend piece, not vice versa.
+class Rules
+  @valid = (cons) ->
+    [x, y] = cons
+    (x + y) % 2 == 1
+  valid: @valid
+
+class Piece extends Rules
+  cons: []
+  constructor: (@cons) ->
+    @element()
+
+  selected: (e) =>
+    e.stopPropagation()
+    @element.toggleClass('selected')
+
+  piece = $("<div class='piece' />")
+
+  element: ->
+    @element = piece.
+      clone(true).
+      appendTo(Checkers.field).
+      bind('click', @selected)
+
+  classify: ->
+    klass = ['piece']
+    klass.push "p#{ "hgfedcba"[@cons[0]] }"
+    klass.push "p#{ @cons[1]+1 }"
+    klass.push "#{ if @color == WHITE then 'white' else 'black' }"
+    @element.attr('class', klass.join(' '))
+
+  render: ->
+    @classify()
+
+class Moves
+  positions: [] # board version list
+
+  constructor: ->
+    @positions.push @pieces
+
+class Board extends Moves
+  pieces: []
+  unit: null # pixels per one square
+
+  constructor: ->
+    @create()
+    super
+
+  create: ->
+    for x in [0..7]
+      for y in [0..5]
+        if Rules.valid([x, y])
+          y += 2 if y > 2
+          piece = new Piece([x, y])
+          piece.color = y > 3 ? WHITE : BLACK
+          @pieces.push(piece)
+
+  release: (e) => # Release can be anywhere.
+    x    = Math.floor(e.originalEvent.layerX / @unit)
+    y    = Math.floor(e.originalEvent.layerY / @unit)
+    cons = [x, y]
+    sel  = found = @find()
+    @put(sel, cons) if found and sel.valid(cons)
+
+  put: (piece, cons) -> # Put only where cons are valid.
+    piece.cons = cons
+    piece.render()
+
+  find: (fun = null) ->
+    fun = fun || (p) -> p.element.is('.selected')
+    ret = undefined
+
+    _(@pieces).each (p) ->
+      return ((ret = p) && false) if fun(p)
+
+    ret
+
+  render: ->
+    _.each _.flatten(@pieces), (p) -> p.render()
+
+Game.list.checkers = Checkers =
+  init: (@field) ->
+    @board = new Board
+    @board.unit = @field.width() / 8
+    @board.render()
+    @field.addClass('checkers').bind('click', @board.release)
+
+  stop: ->
+    null
