@@ -11,30 +11,51 @@ class Rules
     [x, y] = cons
     x >= 0 and x <= 7 and y >= 0 and y <= 7
 
+  direction: ->
+    if @color == BLACK then 1 else -1
+
   # Checks whether on a black square only.
   @black = (cons) ->
     [x, y] = cons ? @target
     (x + y) % 2 == 1
   black: @black
 
+  diagonal: ->
+    x = @cons[X] - @target[X]
+    y = @cons[Y] - @target[Y]
+    Math.abs(x) == Math.abs(y)
+
+  # Checks whether the move is going towards the other end.
+  fd: ->
+    [(@target[Y] - @cons[Y]), @direction()]
+  forward: ->
+    [delta, dir] = @fd()
+    delta == dir
+  forwardish: ->
+    [delta, dir] = @fd()
+    if dir > 0 then delta >= dir else delta <= dir
+
   gen_move_vectors: (zoom = 1) ->
-    dir = if @color == BLACK then 1 else -1
+    dir = @direction()
     _.chain([[-1, dir], [1, dir]]).map((vec) =>
       target = [@cons[X] + vec[X]*zoom, @cons[Y] + vec[Y]*zoom]
       return undefined unless bound(target)
       target
     ).compact().value()
 
+  UNABLE = 2
+  DONE   = 1
+  WRONG  = 0
   # Did he do the obligatory attacking?
   attacked: ->
     can = false
     _(@gen_move_vectors()).each (target) =>
       piece = @set.get(target)
       can = true if piece && piece.color == !@color
-    return not can unless can
+    return UNABLE unless can
 
     dsts = @gen_move_vectors(2)
-    return not can if dsts.length == 0
+    return UNABLE if dsts.length == 0 # This one should get executed.
 
     did   = false
     empty = false
@@ -42,12 +63,18 @@ class Rules
       piece = @set.get(dst)
       empty = true if piece == null
       did   = did || empty and _.isEqual(dst, @target)
-    return not empty or did
+
+    return DONE if did
+    return UNABLE if not empty
+    return WRONG
 
   valid: (cons) ->
     [@x, @y] = (@target = cons)
     return false unless @black()
-    return false unless @attacked()
+    return false unless @diagonal()
+    return false unless @forwardish()
+    return false unless (attacked = @attacked())
+    return false if attacked == UNABLE and not @forward()
     return true
 
 class Piece extends Rules
