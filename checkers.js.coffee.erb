@@ -3,16 +3,33 @@ WHITE   = true
 REGULAR = false
 QUEEN   = true
 
-# This is a mixin and rules /logically/ actually extend piece, not vice versa.
+# This is a mixin, and rules /logically/ actually extend piece, not vice versa.
 class Rules
-  @valid = (cons) ->
-    [x, y] = cons
+  # Checks whether on a black square only.
+  @black = (cons) ->
+    [x, y] = cons ? @target
     (x + y) % 2 == 1
-  valid: @valid
+  black: @black
+
+  canAttack: ->
+    false
+
+  didAttack: ->
+    true
+
+  # Checks whether can attack and if so, if it's being done.
+  attack: ->
+    return true unless @canAttack()
+    return true if @didAttack()
+
+  valid: (cons) ->
+    @target = cons
+    return false unless @black()
+    return false unless @attack()
+    return true
 
 class Piece extends Rules
-  cons: []
-  constructor: (@cons) ->
+  constructor: (@cons, @color, @set) ->
     @element()
 
   selected: (e) =>
@@ -37,6 +54,26 @@ class Piece extends Rules
   render: ->
     @classify()
 
+class Pieces
+  X = 0
+  Y = 1
+  array: []
+  constructor: ->
+    for x in [0..7]
+      @array.push([])
+      for y in [0..7]
+        _(@array).last().push(null)
+
+  new: (args...) ->
+    [[x, y], _...] = args
+    @array[x][y] = new Piece(args..., this)
+
+  get: (cons) ->
+    @array[cons[X]][cons[Y]]
+
+  each: (fun) ->
+    _.chain(@array).flatten().compact().each(fun)
+
 class Moves
   positions: [] # board version list
 
@@ -44,7 +81,7 @@ class Moves
     @positions.push @pieces
 
 class Board extends Moves
-  pieces: []
+  pieces: new Pieces
   unit: null # pixels per one square
 
   constructor: ->
@@ -54,11 +91,9 @@ class Board extends Moves
   create: ->
     for x in [0..7]
       for y in [0..5]
-        if Rules.valid([x, y])
+        if Rules.black([x, y])
           y += 2 if y > 2
-          piece = new Piece([x, y])
-          piece.color = y > 3 ? WHITE : BLACK
-          @pieces.push(piece)
+          @pieces.new([x, y], y > 3 ? WHITE : BLACK)
 
   release: (e) => # Release can be anywhere.
     x    = Math.floor(e.originalEvent.layerX / @unit)
@@ -75,13 +110,13 @@ class Board extends Moves
     fun = fun || (p) -> p.element.is('.selected')
     ret = undefined
 
-    _(@pieces).each (p) ->
+    @pieces.each (p) ->
       return ((ret = p) && false) if fun(p)
 
     ret
 
   render: ->
-    _.each _.flatten(@pieces), (p) -> p.render()
+    @pieces.each (p) -> p.render()
 
 Game.list.checkers = Checkers =
   init: (@field) ->
