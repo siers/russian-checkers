@@ -2,30 +2,52 @@ BLACK   = false
 WHITE   = true
 REGULAR = false
 QUEEN   = true
+X       = 0
+Y       = 1
 
 # This is a mixin, and rules /logically/ actually extend piece, not vice versa.
 class Rules
+  bound = (cons) ->
+    [x, y] = cons
+    x >= 0 and x <= 7 and y >= 0 and y <= 7
+
   # Checks whether on a black square only.
   @black = (cons) ->
     [x, y] = cons ? @target
     (x + y) % 2 == 1
   black: @black
 
-  canAttack: ->
-    false
+  gen_move_vectors: (zoom = 1) ->
+    dir = if @color == BLACK then 1 else -1
+    _.chain([[-1, dir], [1, dir]]).map((vec) =>
+      target = [@cons[X] + vec[X]*zoom, @cons[Y] + vec[Y]*zoom]
+      return undefined unless bound(target)
+      target
+    ).compact().value()
 
-  didAttack: ->
-    true
+  # Did he do the obligatory attacking?
+  attacked: ->
+    can = false
+    _(@gen_move_vectors()).each (target) =>
+      piece = @set.get(target)
+      can = true if piece && piece.color == !@color
+    return not can unless can
 
-  # Checks whether can attack and if so, if it's being done.
-  attack: ->
-    return true unless @canAttack()
-    return true if @didAttack()
+    dsts = @gen_move_vectors(2)
+    return not can if dsts.length == 0
+
+    did   = false
+    empty = false
+    _(dsts).each (dst) =>
+      piece = @set.get(dst)
+      empty = true if piece == null
+      did   = did || empty and _.isEqual(dst, @target)
+    return not empty or did
 
   valid: (cons) ->
-    @target = cons
+    [@x, @y] = (@target = cons)
     return false unless @black()
-    return false unless @attack()
+    return false unless @attacked()
     return true
 
 class Piece extends Rules
@@ -55,8 +77,6 @@ class Piece extends Rules
     @classify()
 
 class Pieces
-  X = 0
-  Y = 1
   array: []
   constructor: ->
     for x in [0..7]
@@ -69,10 +89,19 @@ class Pieces
     @array[x][y] = new Piece(args..., this)
 
   get: (cons) ->
-    @array[cons[X]][cons[Y]]
+    try
+      @array[cons[X]][cons[Y]]
+    catch e
+      $.log "Error on requesting #{ cons[X] }x#{ cons[Y] } from piece set."
+      throw e
 
   each: (fun) ->
     _.chain(@array).flatten().compact().each(fun)
+
+  move: (piece, cons) ->
+    @array[piece.cons[X]][piece.cons[Y]] = null
+    # A check of emptiness of the destination could be placed here.
+    (@array[cons[X]][cons[Y]] = piece).cons = cons
 
 class Moves
   positions: [] # board version list
@@ -93,7 +122,7 @@ class Board extends Moves
       for y in [0..5]
         if Rules.black([x, y])
           y += 2 if y > 2
-          @pieces.new([x, y], y > 3 ? WHITE : BLACK)
+          @pieces.new([x, y], if y > 3 then WHITE else BLACK)
 
   release: (e) => # Release can be anywhere.
     x    = Math.floor(e.originalEvent.layerX / @unit)
@@ -103,7 +132,7 @@ class Board extends Moves
     @put(sel, cons) if found and sel.valid(cons)
 
   put: (piece, cons) -> # Put only where cons are valid.
-    piece.cons = cons
+    @pieces.move(piece, cons)
     piece.render()
 
   find: (fun = null) ->
