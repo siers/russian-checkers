@@ -26,8 +26,19 @@ class Rules
     y = @cons[Y] - @target[Y]
     Math.abs(x) == Math.abs(y)
 
+  # Check that space where it's going is empty.
+  empty: ->
+    x    = @target[X] - @cons[X]
+    y    = @target[Y] - @cons[Y]
+    vec  = [x / Math.abs(x), y / Math.abs(y)]
+    tile = @cons
+
+    until _.isEqual(tile, @target)
+      tile = [tile[X] + vec[X], tile[Y] + vec[Y]]
+      return false if @set.get(tile)
+    return true
+
   # Checks whether the move is going towards the other end.
-  fd: ->
   forward: ->
     return true if @queen
     (@target[Y] - @cons[Y]) == @direction()
@@ -83,10 +94,11 @@ class Rules
 
   valid: (cons) ->
     [@x, @y] = (@target = cons)
+    return false if _.isEqual(@target, @cons)
     return false unless @black()
     return false unless @diagonal()
     return false unless (attacked = @attacked())
-    return false if attacked == UNABLE and not @forward()
+    return false if attacked == UNABLE and (not @forward() or not @empty())
     return true
 
 class Piece extends Rules
@@ -164,7 +176,7 @@ class Board extends Moves
           y += 2 if y > 2
           @pieces.new([x, y],
             if y > 3 then WHITE else BLACK,
-            if Math.random() * 3 > 1 then QUEEN else REGULAR)
+            if Math.random() * 3 > 2 then QUEEN else REGULAR)
 
   release: (e) => # Release can be anywhere.
     x    = Math.floor(e.originalEvent.layerX / @unit)
