@@ -107,6 +107,7 @@ class Piece extends Rules
 
   selected: (e) =>
     e.stopPropagation()
+    return if (p = @set.find()) && p != this
     @element.toggleClass('selected')
 
   piece = $("<div class='piece' />")
@@ -150,6 +151,15 @@ class Pieces
   each: (fun) ->
     _.chain(@array).flatten().compact().each(fun)
 
+  find: (fun = null) ->
+    fun = fun || (p) -> p.element.is('.selected')
+    ret = undefined
+
+    @each (p) ->
+      return ((ret = p) && false) if fun(p)
+
+    ret
+
   move: (piece, cons) ->
     @array[piece.cons[X]][piece.cons[Y]] = null
     # A check of emptiness of the destination could be placed here.
@@ -182,21 +192,12 @@ class Board extends Moves
     x    = Math.floor(e.originalEvent.layerX / @unit)
     y    = Math.floor(e.originalEvent.layerY / @unit)
     cons = [x, y]
-    sel  = found = @find()
+    sel  = found = @pieces.find()
     @put(sel, cons) if found and sel.valid(cons)
 
   put: (piece, cons) -> # Put only where cons are valid.
     @pieces.move(piece, cons)
     piece.render()
-
-  find: (fun = null) ->
-    fun = fun || (p) -> p.element.is('.selected')
-    ret = undefined
-
-    @pieces.each (p) ->
-      return ((ret = p) && false) if fun(p)
-
-    ret
 
   render: ->
     @pieces.each (p) -> p.render()
