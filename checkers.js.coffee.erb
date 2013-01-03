@@ -30,11 +30,17 @@ class Rules
   forward: ->
     (@target[Y] - @cons[Y]) == @direction()
 
-  gen_move_vectors: (zoom = 1) ->
+  diagonals: (max_length = 1) ->
     _.chain([[-1, 1], [1, 1], [-1, -1], [1, -1]]).map((vec) =>
-      target = [@cons[X] + vec[X]*zoom, @cons[Y] + vec[Y]*zoom]
-      return undefined unless bound(target)
-      [target, vec]
+      targets = []
+      length  = 1
+      while length <= max_length
+        cons = [@cons[X] + vec[X]*length, @cons[Y] + vec[Y]*length]
+        length++
+
+        targets.push cons if bound(cons)
+      return undefined if targets.length == 0
+      [targets, vec]
     ).compact().value()
 
   UNABLE = 2
@@ -42,8 +48,8 @@ class Rules
   WRONG  = 0
   # Did he do the obligatory attacking?
   attacked: ->
-    plausible_vecs = _(@gen_move_vectors()).select ([target, vec]) =>
-      piece = @set.get(target)
+    plausible_vecs = _(@diagonals(2)).select ([[target, _], vec]) =>
+      piece     = @set.get(target)
       plausible = piece && piece.color == !@color
 
     return UNABLE if plausible_vecs.length == 0
@@ -51,12 +57,10 @@ class Rules
     did   = false
     empty = false
 
-    _(plausible_vecs).each ([other, vec]) =>
-      dst   = [other[X] + vec[X], other[Y] + vec[Y]]
-      return unless bound(dst)
-      piece = @set.get(dst)
+    _(plausible_vecs).each ([[beatable, next], vec]) =>
+      piece = @set.get(next)
       empty = empty || true if piece == null
-      did   = did || empty and _.isEqual(dst, @target)
+      did   = did   || empty and _.isEqual(next, @target)
 
     return DONE if did
     return UNABLE if not empty
