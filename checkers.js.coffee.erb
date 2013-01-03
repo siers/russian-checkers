@@ -1,9 +1,10 @@
-BLACK   = false
-WHITE   = true
-REGULAR = false
-QUEEN   = true # Must be always true.
-X       = 0
-Y       = 1
+BLACK    = false
+WHITE    = true
+REGULAR  = false
+QUEEN    = true # Must be always true.
+X        = 0
+Y        = 1
+INFINITY = 9
 
 # This is a mixin, and rules /logically/ actually extend piece, not vice versa.
 class Rules
@@ -28,19 +29,20 @@ class Rules
   # Checks whether the move is going towards the other end.
   fd: ->
   forward: ->
+    return true if @queen
     (@target[Y] - @cons[Y]) == @direction()
 
   diagonals: (max_length = 1) ->
     _.chain([[-1, 1], [1, 1], [-1, -1], [1, -1]]).map((vec) =>
-      targets = []
+      tiles   = []
       length  = 1
       while length <= max_length
         cons = [@cons[X] + vec[X]*length, @cons[Y] + vec[Y]*length]
         length++
 
-        targets.push cons if bound(cons)
-      return undefined if targets.length == 0
-      [targets, vec]
+        tiles.push cons if bound(cons)
+      return undefined if tiles.length == 0
+      [tiles, vec]
     ).compact().value()
 
   UNABLE = 2
@@ -48,22 +50,35 @@ class Rules
   WRONG  = 0
   # Did he do the obligatory attacking?
   attacked: ->
-    plausible_vecs = _(@diagonals(2)).select ([[target, _], vec]) =>
-      piece     = @set.get(target)
-      plausible = piece && piece.color == !@color
+    length = if @queen then INFINITY else 2
+    # Looks for the [x,*,*] in diagonal '   x**' where x is the other checker.
+    plausible_diognals = _(@diagonals(length)).map ([[tiles..., last], vec]) =>
+      plausible = null
+      tiles = _(tiles).select (tile) =>
+        piece      = @set.get(tile)
+        plausible ?= piece && piece.color == !@color
+      if tiles.length == 0
+        null # removed by compatct
+      else
+        tiles.push last
+        tiles.shift()
+        [tiles, vec]
 
-    return UNABLE if plausible_vecs.length == 0
+    plausible_diognals = _(plausible_diognals).compact()
+    return UNABLE if plausible_diognals.length == 0
 
-    did   = false
-    empty = false
+    # Looks for @target = marked space in diagonal '[  ]x  '.
+    empties = []
+    attacked = _(plausible_diognals).any ([tiles, vec]) =>
+      empty = true
+      success = _(tiles).any (cons) =>
+        empty = false if @set.get(cons)
+        empties.push(empty)
+        empty and _.isEqual(cons, @target)
+      success
 
-    _(plausible_vecs).each ([[beatable, next], vec]) =>
-      piece = @set.get(next)
-      empty = empty || true if piece == null
-      did   = did   || empty and _.isEqual(next, @target)
-
-    return DONE if did
-    return UNABLE if not empty
+    return DONE if attacked
+    return UNABLE unless _(empties).any(false)
     return WRONG
 
   valid: (cons) ->
