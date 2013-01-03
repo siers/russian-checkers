@@ -34,7 +34,7 @@ class Rules
     _.chain([[-1, 1], [1, 1], [-1, -1], [1, -1]]).map((vec) =>
       target = [@cons[X] + vec[X]*zoom, @cons[Y] + vec[Y]*zoom]
       return undefined unless bound(target)
-      target
+      [target, vec]
     ).compact().value()
 
   UNABLE = 2
@@ -42,20 +42,20 @@ class Rules
   WRONG  = 0
   # Did he do the obligatory attacking?
   attacked: ->
-    can = false
-    _(@gen_move_vectors()).each (target) =>
+    plausible_vecs = _(@gen_move_vectors()).select ([target, vec]) =>
       piece = @set.get(target)
-      can = true if piece && piece.color == !@color
-    return UNABLE unless can
+      plausible = piece && piece.color == !@color
 
-    dsts = @gen_move_vectors(2)
-    return UNABLE if dsts.length == 0 # This one should get executed.
+    return UNABLE if plausible_vecs.length == 0
 
     did   = false
     empty = false
-    _(dsts).each (dst) =>
+
+    _(plausible_vecs).each ([other, vec]) =>
+      dst   = [other[X] + vec[X], other[Y] + vec[Y]]
+      return unless bound(dst)
       piece = @set.get(dst)
-      empty = true if piece == null
+      empty = empty || true if piece == null
       did   = did || empty and _.isEqual(dst, @target)
 
     return DONE if did
