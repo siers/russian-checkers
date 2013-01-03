@@ -1,7 +1,7 @@
 BLACK   = false
 WHITE   = true
 REGULAR = false
-QUEEN   = true
+QUEEN   = true # Must be always true.
 X       = 0
 Y       = 1
 
@@ -71,7 +71,7 @@ class Rules
     return true
 
 class Piece extends Rules
-  constructor: (@cons, @color, @set) ->
+  constructor: (@cons, @color, @queen, @set) ->
     @element()
 
   selected: (e) =>
@@ -91,6 +91,7 @@ class Piece extends Rules
     klass.push "p#{ "hgfedcba"[@cons[0]] }"
     klass.push "p#{ @cons[1]+1 }"
     klass.push "#{ if @color == WHITE then 'white' else 'black' }"
+    klass.push "#{ if @queen then 'queen' else '' }"
     @element.attr('class', klass.join(' '))
 
   render: ->
@@ -142,7 +143,9 @@ class Board extends Moves
       for y in [0..5]
         if Rules.black([x, y])
           y += 2 if y > 2
-          @pieces.new([x, y], if y > 3 then WHITE else BLACK)
+          @pieces.new([x, y],
+            if y > 3 then WHITE else BLACK,
+            if Math.random() * 3 > 1 then QUEEN else REGULAR)
 
   release: (e) => # Release can be anywhere.
     x    = Math.floor(e.originalEvent.layerX / @unit)
