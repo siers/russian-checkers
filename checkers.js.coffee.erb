@@ -1,3 +1,4 @@
+EMPTY    = null
 BLACK    = false
 WHITE    = true
 REGULAR  = false
@@ -72,7 +73,6 @@ class Rules
         null # removed by compatct
       else
         tiles.push last
-        tiles.shift()
         [tiles, vec]
 
     plausible_diognals = _(plausible_diognals).compact()
@@ -80,13 +80,12 @@ class Rules
 
     # Looks for @target = marked space in diagonal '[  ]x  '.
     empties = []
-    attacked = _(plausible_diognals).any ([tiles, vec]) =>
+    attacked = _(plausible_diognals).detect ([[edible, tiles...], vec]) =>
       empty = true
-      success = _(tiles).any (cons) =>
-        empty = false if @set.get(cons)
-        empties.push(empty)
-        empty and _.isEqual(cons, @target)
-      success
+      _(tiles).any (cons) =>
+        piece = @set.get(cons)
+        empties.push(!piece)
+        @victim = @set.get(edible) if !piece and _.isEqual(cons, @target)
 
     return DONE if attacked
     return UNABLE unless _(empties).any(false)
@@ -100,6 +99,12 @@ class Rules
     return false unless (attacked = @attacked())
     return false if attacked == UNABLE and (not @forward() or not @empty())
     return true
+
+  move: (cons) ->
+    @victim = EMPTY
+    if valid = @valid(cons)
+      @set.remove(@victim) if @victim?
+    return valid
 
 class Piece extends Rules
   constructor: (@cons, @color, @queen, @set) ->
@@ -129,17 +134,24 @@ class Piece extends Rules
   render: ->
     @classify()
 
+  terminate: ->
+    @element.remove()
+
 class Pieces
   array: []
   constructor: ->
     for x in [0..7]
       @array.push([])
       for y in [0..7]
-        _(@array).last().push(null)
+        _(@array).last().push(EMPTY)
 
   new: (args...) ->
     [[x, y], _...] = args
     @array[x][y] = new Piece(args..., this)
+
+  remove: (p) ->
+    @array[p.cons[X]][p.cons[Y]].terminate()
+    @array[p.cons[X]][p.cons[Y]] = EMPTY
 
   get: (cons) ->
     try
@@ -148,14 +160,14 @@ class Pieces
       $.log "Error on requesting #{ cons[X] }x#{ cons[Y] } from piece set."
       throw e
 
-  each: (fun) ->
-    _.chain(@array).flatten().compact().each(fun)
+  list: (fun) ->
+    _.chain(@array).flatten().compact().value()
 
   find: (fun = null) ->
     fun = fun || (p) -> p.element.is('.selected')
     ret = undefined
 
-    @each (p) ->
+    _(@list()).each (p) ->
       return ((ret = p) && false) if fun(p)
 
     ret
@@ -163,7 +175,9 @@ class Pieces
   move: (piece, cons) ->
     @array[piece.cons[X]][piece.cons[Y]] = null
     # A check of emptiness of the destination could be placed here.
-    (@array[cons[X]][cons[Y]] = piece).cons = cons
+    if moved = piece.move cons
+      (@array[cons[X]][cons[Y]] = piece).cons = cons
+    return moved
 
 class Moves
   positions: [] # board version list
@@ -194,15 +208,14 @@ class Board extends Moves
     y    = Math.floor(e.originalEvent.layerY / @unit)
     cons = [x, y]
     sel  = found = @pieces.find()
-    @put(sel, cons) if found and !!@turn == !!sel.color and sel.valid(cons)
+    @put(sel) if found and !!@turn == !!sel.color and @pieces.move(sel, cons)
 
-  put: (piece, cons) -> # Put only where cons are valid.
+  put: (piece) -> # Put only where cons are valid.
     @turn ^= true
-    @pieces.move(piece, cons)
-    piece.render()
+    _(@pieces.list()).invoke('render')
 
   render: ->
-    @pieces.each (p) -> p.render()
+    _(@pieces.list()).each (p) -> p.render()
 
 Game.list.checkers = Checkers =
   init: (@field) ->
