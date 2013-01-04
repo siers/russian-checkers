@@ -174,6 +174,7 @@ class Moves
 class Board extends Moves
   pieces: new Pieces
   unit: null # pixels per one square
+  turn: WHITE
 
   constructor: ->
     @create()
@@ -193,9 +194,10 @@ class Board extends Moves
     y    = Math.floor(e.originalEvent.layerY / @unit)
     cons = [x, y]
     sel  = found = @pieces.find()
-    @put(sel, cons) if found and sel.valid(cons)
+    @put(sel, cons) if found and !!@turn == !!sel.color and sel.valid(cons)
 
   put: (piece, cons) -> # Put only where cons are valid.
+    @turn ^= true
     @pieces.move(piece, cons)
     piece.render()
 
