@@ -5,13 +5,13 @@ REGULAR  = false
 QUEEN    = true # Must be always true.
 X        = 0
 Y        = 1
-INFINITY = 9
 
 # This is a mixin, and rules /logically/ actually extend piece, not vice versa.
 class Rules
   bound = (cons) ->
-    [x, y] = cons
+    [x, y] = cons ? @target
     x >= 0 and x <= 7 and y >= 0 and y <= 7
+  bound: bound
 
   direction: ->
     if @color == BLACK then 1 else -1
@@ -52,7 +52,8 @@ class Rules
         cons = [@cons[X] + vec[X]*length, @cons[Y] + vec[Y]*length]
         length++
 
-        tiles.push cons if bound(cons)
+        break unless bound(cons)
+        tiles.push cons
       return undefined if tiles.length == 0
       [tiles, vec]
     ).compact().value()
@@ -60,32 +61,34 @@ class Rules
   UNABLE = 2
   DONE   = 1
   WRONG  = 0
-  # Did he do the obligatory attacking?
-  attacked: ->
-    length = if @queen then INFINITY else 2
+
+  find: (length, color) ->
     # Looks for the [x,*,*] in diagonal '   x**' where x is the other checker.
     plausible_diognals = _(@diagonals(length)).map ([[tiles..., last], vec]) =>
       plausible = null
       tiles = _(tiles).select (tile) =>
         piece      = @set.get(tile)
-        plausible ?= piece && piece.color == !@color
+        plausible ?= piece && piece.color == color
+
       if tiles.length == 0
         null # removed by compatct
       else
         tiles.push last
         [tiles, vec]
 
-    plausible_diognals = _(plausible_diognals).compact()
-    return UNABLE if plausible_diognals.length == 0
+    _(plausible_diognals).compact()
 
-    # Looks for @target = marked space in diagonal '[  ]x  '.
-    empties = []
-    attacked = _(plausible_diognals).detect ([[edible, tiles...], vec]) =>
-      empty = true
-      _(tiles).any (cons) =>
-        piece = @set.get(cons)
-        empties.push(!piece)
-        @victim = @set.get(edible) if !piece and _.isEqual(cons, @target)
+  # Did he do the obligatory attacking?
+  attacked: ->
+    plausible_diognals = @find((if @queen then Infinity else 2), !@color)
+
+    empties  = []
+    attacked = _(plausible_diognals).any ([tiles, vec]) =>
+      _(_(tiles).tail()).detect (tile) =>
+        empties.push(empty = !(piece = @set.get(tile)))
+        if empty && _.isEqual(tile, @target)
+          @victim = @set.get(_(tiles).head())
+          return true
 
     return DONE if attacked
     return UNABLE unless _(empties).any(false)
@@ -93,16 +96,39 @@ class Rules
 
   valid: (cons) ->
     [@x, @y] = (@target = cons)
-    return false if _.isEqual(@target, @cons)
-    return false unless @black()
-    return false unless @diagonal()
-    return false unless (attacked = @attacked())
-    return false if attacked == UNABLE and (not @forward() or not @empty())
+    required = []
+    attacked = null
+    required.push 'not self', ->
+      not _.isEqual(@target, @cons)
+
+    required.push 'proper square', ->
+      @black() and @bound()
+
+    required.push 'on diognals', ->
+      @diagonal()
+
+    required.push 'has attacked', ->
+      (attacked = @attacked()) != WRONG
+
+    required.push 'move forward and on empty tile', ->
+      attacked != UNABLE or @forward() and @empty()
+
+    while required.length
+      [name, rule] = required.slice(0, 2)
+      required.shift() && required.shift()
+
+      if (state = rule.call(this))
+        $.log "Rule '#{ name }' passed."
+      else
+        $.log "Rule '#{ name }' failed!"
+        return state
+
     return true
 
   move: (cons) ->
     @victim = EMPTY
     if valid = @valid(cons)
+      $.log "removin': ", @victim
       @set.remove(@victim) if @victim?
     return valid
 
@@ -110,18 +136,14 @@ class Piece extends Rules
   constructor: (@cons, @color, @queen, @set) ->
     @element()
 
-  selected: (e) =>
-    e.stopPropagation()
-    return if (p = @set.find()) && p != this
-    @element.toggleClass('selected')
+  @select = (piece) ->
+    $.log("Selecting: ", piece)
+    $(piece).toggleClass('selected')
 
   piece = $("<div class='piece' />")
 
   element: ->
-    @element = piece.
-      clone(true).
-      appendTo(Checkers.field).
-      bind('click', @selected)
+    @element = piece.clone(true).appendTo(Checkers.field)
 
   classify: ->
     klass = ['piece']
@@ -173,10 +195,11 @@ class Pieces
     ret
 
   move: (piece, cons) ->
-    @array[piece.cons[X]][piece.cons[Y]] = null
     # A check of emptiness of the destination could be placed here.
-    if moved = piece.move cons
-      (@array[cons[X]][cons[Y]] = piece).cons = cons
+    if moved = piece.move(cons)
+      @array[cons[X]][cons[Y]] = piece
+      @array[piece.cons[X]][piece.cons[Y]] = null
+      piece.cons = cons
     return moved
 
 class Moves
@@ -190,8 +213,15 @@ class Board extends Moves
   unit: null # pixels per one square
   turn: WHITE
 
-  constructor: ->
+  constructor: (@field, @unit) ->
     @create()
+    @field.
+      bind('click', @release).
+      delegate '.piece', 'click', (e) =>
+        e.stopPropagation()
+        p = @pieces.find()
+        if not p || p.element?.is?(e.target)
+          Piece.select(e.target)
     super
 
   create: ->
@@ -212,17 +242,16 @@ class Board extends Moves
 
   put: (piece) -> # Put only where cons are valid.
     @turn ^= true
-    _(@pieces.list()).invoke('render')
+    @render()
 
   render: ->
-    _(@pieces.list()).each (p) -> p.render()
+    _(@pieces.list()).invoke('render')
 
 Game.list.checkers = Checkers =
   init: (@field) ->
-    @board = new Board
-    @board.unit = @field.width() / 8
+    @board = new Board(@field, @field.width() / 8)
     @board.render()
-    @field.addClass('checkers').bind('click', @board.release)
+    @field.addClass('checkers')
 
   stop: ->
     null
