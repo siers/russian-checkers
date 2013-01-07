@@ -216,6 +216,7 @@ class Board extends Moves
   constructor: (@field, @unit) ->
     @create()
     @field.
+      addClass('whites-turn checkers').
       bind('click', @release).
       delegate '.piece', 'click', (e) =>
         e.stopPropagation()
@@ -242,6 +243,7 @@ class Board extends Moves
 
   put: (piece) -> # Put only where cons are valid.
     @turn ^= true
+    @field.toggleClass('whites-turn blacks-turn')
     @render()
 
   render: ->
@@ -251,7 +253,6 @@ Game.list.checkers = Checkers =
   init: (@field) ->
     @board = new Board(@field, @field.width() / 8)
     @board.render()
-    @field.addClass('checkers')
 
   stop: ->
     null
