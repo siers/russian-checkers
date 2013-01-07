@@ -84,11 +84,17 @@ class Rules
 
     empties  = []
     attacked = _(plausible_diognals).any ([tiles, vec]) =>
+      past_empty = null # Am I trying to search for empty spaces after a piece?
+
       _(_(tiles).tail()).detect (tile) =>
-        empties.push(empty = !(piece = @set.get(tile)))
+        piece = @set.get(tile)
+        empties.push(empty = not past_empty and not piece)
+        past_empty ?= piece && piece.color != @color # Dry run if past_empty.
+
         if empty && _.isEqual(tile, @target)
           @victim = @set.get(_(tiles).head())
-          return true
+          unless past_empty # Dry run if past empty.
+            return true
 
     return DONE if attacked
     return UNABLE unless _(empties).any(false)
