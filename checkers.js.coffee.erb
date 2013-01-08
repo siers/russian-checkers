@@ -79,7 +79,7 @@ class Rules
     _(plausible_diognals).compact()
 
   # Did he do the obligatory attacking?
-  attacked: ->
+  attacked: (dry_run = false) ->
     plausible_diognals = @find((if @queen then Infinity else 2), !@color)
 
     empties  = []
@@ -91,7 +91,7 @@ class Rules
         empties.push(empty = not past_empty and not piece)
         past_empty ?= piece && piece.color != @color # Dry run if past_empty.
 
-        if empty && _.isEqual(tile, @target)
+        if !dry_run && empty && _.isEqual(tile, @target)
           @victim = @set.get(_(tiles).head())
           unless past_empty # Dry run if past empty.
             return true
@@ -99,6 +99,10 @@ class Rules
     return DONE if attacked
     return UNABLE unless _(empties).any(false)
     return WRONG
+
+  # synonym to «can attack», independent of @target
+  voltage: ->
+    @attacked(true) != UNABLE
 
   valid: (cons) ->
     [@x, @y] = (@target = cons)
@@ -201,6 +205,12 @@ class Pieces
 
     ret
 
+  select: (fun = null) ->
+    fun = fun || (p) ->
+      p.voltage()
+
+    _(@list()).select(fun)
+
   move: (piece, cons) ->
     # A check of emptiness of the destination could be placed here.
     if moved = piece.move(cons)
@@ -250,7 +260,15 @@ class Board extends Moves
     y    = Math.floor(e.originalEvent.layerY / @unit)
     cons = [x, y]
     sel  = found = @pieces.find()
-    @put(sel) if found and !!@turn == !!sel.color and @pieces.move(sel, cons)
+    must_move   = @pieces.select()
+    proper_turn = !!@turn == !!sel.color
+
+    can = true
+    can = can and found
+    can = can and proper_turn
+    can = can and _.isEmpty(must_move) or _(must_move).contains(sel)
+    can = can and @pieces.move(sel, cons)
+    @put(sel) if can
 
   put: (piece) -> # Put only where cons are valid.
     @turn ^= true
