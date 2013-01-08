@@ -143,8 +143,7 @@ class Piece extends Rules
     @element()
 
   @select = (piece) ->
-    $.log("Selecting: ", piece)
-    $(piece).toggleClass('selected')
+    piece.element.toggleClass('selected')
 
   piece = $("<div class='piece' />")
 
@@ -192,11 +191,13 @@ class Pieces
     _.chain(@array).flatten().compact().value()
 
   find: (fun = null) ->
+    if fun && (target = fun).nodeName
+      fun = (p) -> p.element.is(target)
     fun = fun || (p) -> p.element.is('.selected')
     ret = undefined
 
     _(@list()).each (p) ->
-      return ((ret = p) && false) if fun(p)
+      ret = p if fun(p)
 
     ret
 
@@ -224,12 +225,16 @@ class Board extends Moves
     @field.
       addClass('whites-turn checkers').
       bind('click', @release).
-      delegate '.piece', 'click', (e) =>
-        e.stopPropagation()
-        p = @pieces.find()
-        if not p || p.element?.is?(e.target)
-          Piece.select(e.target)
+      delegate('.piece', 'click', (e) => @pick(e))
     super
+
+  pick: (e) ->
+    e.stopPropagation()
+    select = @pieces.find()
+    target = @pieces.find(e.target)
+
+    if (not select or select.element.is(e.target)) and !!@turn == !!target.color
+      Piece.select(target)
 
   create: ->
     for x in [0..7]

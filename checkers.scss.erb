@@ -3,8 +3,23 @@
   position: relative;
   background: url(<%= asset_path 'games/checkers/board.png' %>);
 
-  &.whites-turn { .piece.black { opacity: 0.7; } }
-  &.blacks-turn { .piece.white { opacity: 0.7; } }
+  @mixin turn($color) {
+    &.#{$color}s-turn {
+      .piece.#{$color} {
+        $rgba: 0;
+        $opa: 0.3;
+        @if $color == black {
+          $rgba: rgba(255, 255, 255, $opa);
+        } @else {
+          $rgba: rgba(192, 0, 255, $opa);
+        }
+        box-shadow: inset 0px 0px 3px 3px $rgba;
+      }
+    }
+  }
+  @include turn(white);
+  @include turn(black);
+
   .piece {
     position: absolute;
     top: 60px;
@@ -13,7 +28,7 @@
     background: url(<%= asset_path 'games/checkers/pieces.png' %>);
 
     &.selected {
-      opacity: 0.6;
+      background-color: rgba(255, 255, 255, 0.2);
     }
     &.queen.white {
       background-position: 0 -60px;
