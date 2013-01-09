@@ -3,11 +3,11 @@
   position: relative;
   background: url(<%= asset_path 'games/checkers/board.png' %>);
 
+  $opa: 0.4;
   @mixin turn($color) {
     &.#{$color}s-turn {
       .piece.#{$color} {
         $rgba: 0;
-        $opa: 0.4;
         @if $color == black {
           $rgba: rgba(255, 255, 0, $opa);
         } @else {
@@ -44,6 +44,9 @@
     }
     &.ghost {
       background-position: 0px -120px;
+    }
+    &.hilight {
+      box-shadow: inset 0px 0px 3px 3px rgba(255, 0, 0, $opa + 0.1) !important;
     }
 
     // Since classes start with numbers, I'll prefix them with 'p'.
