@@ -283,7 +283,6 @@ class Board extends Moves
     @put(sel, move['type']) if can
 
   put: (piece, type) -> # Put only where cons are valid.
-    $.log type == 'attack' and piece.voltage(), type, piece.voltage()
     if type == 'attack' and piece.voltage()
     else
       @turn ^= true
