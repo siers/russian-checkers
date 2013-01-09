@@ -137,11 +137,16 @@ class Rules
 
   move: (cons) ->
     @victim = EMPTY
-    type = 'move'
+    type    = 'move'
+    promote = (y, col) =>
+      cons[Y] == y and @color == col
+
     if valid = @valid(cons)
+      @queen = QUEEN if promote(0, WHITE) or promote(7, BLACK)
       if @victim?
         type = 'attack'
         @set.remove(@victim)
+
     return {valid: valid, type: type}
 
 class Piece extends Rules
@@ -219,6 +224,7 @@ class Pieces
       @array[cons[X]][cons[Y]] = piece
       @array[piece.cons[X]][piece.cons[Y]] = null
       piece.cons = cons
+
     return moved
 
 class Moves
