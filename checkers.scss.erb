@@ -7,11 +7,11 @@
     &.#{$color}s-turn {
       .piece.#{$color} {
         $rgba: 0;
-        $opa: 0.3;
+        $opa: 0.4;
         @if $color == black {
-          $rgba: rgba(255, 255, 255, $opa);
+          $rgba: rgba(255, 255, 0, $opa);
         } @else {
-          $rgba: rgba(192, 0, 255, $opa);
+          $rgba: rgba(255, 255, 0, $opa);
         }
         box-shadow: inset 0px 0px 3px 3px $rgba;
       }

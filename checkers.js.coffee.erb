@@ -137,10 +137,12 @@ class Rules
 
   move: (cons) ->
     @victim = EMPTY
+    type = 'move'
     if valid = @valid(cons)
-      $.log "removin': ", @victim
-      @set.remove(@victim) if @victim?
-    return valid
+      if @victim?
+        type = 'attack'
+        @set.remove(@victim)
+    return {valid: valid, type: type}
 
 class Piece extends Rules
   constructor: (@cons, @color, @queen, @set) ->
@@ -205,15 +207,15 @@ class Pieces
 
     ret
 
-  select: (fun = null) ->
-    fun = fun || (p) ->
-      p.voltage()
+  voltages: (color) ->
+    fun = (p) ->
+      !!p.color == !!color and p.voltage()
 
     _(@list()).select(fun)
 
   move: (piece, cons) ->
     # A check of emptiness of the destination could be placed here.
-    if moved = piece.move(cons)
+    if (moved = piece.move(cons))['valid']
       @array[cons[X]][cons[Y]] = piece
       @array[piece.cons[X]][piece.cons[Y]] = null
       piece.cons = cons
@@ -260,19 +262,21 @@ class Board extends Moves
     y    = Math.floor(e.originalEvent.layerY / @unit)
     cons = [x, y]
     sel  = found = @pieces.find()
-    must_move   = @pieces.select()
-    proper_turn = !!@turn == !!sel.color
+    must_move    = @pieces.voltages(@turn)
 
     can = true
     can = can and found
-    can = can and proper_turn
+    can = can and !!@turn == !!sel.color
     can = can and _.isEmpty(must_move) or _(must_move).contains(sel)
-    can = can and @pieces.move(sel, cons)
-    @put(sel) if can
+    can = can and (move = @pieces.move(sel, cons))['valid']
+    @put(sel, move['type']) if can
 
-  put: (piece) -> # Put only where cons are valid.
-    @turn ^= true
-    @field.toggleClass('whites-turn blacks-turn')
+  put: (piece, type) -> # Put only where cons are valid.
+    $.log type == 'attack' and piece.voltage(), type, piece.voltage()
+    if type == 'attack' and piece.voltage()
+    else
+      @turn ^= true
+      @field.toggleClass('whites-turn blacks-turn')
     @render()
 
   render: ->
