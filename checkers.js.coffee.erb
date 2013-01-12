@@ -100,7 +100,7 @@ class Rules
     return UNABLE unless _(empties).any(false)
     return WRONG
 
-  # synonym to «can attack», independent of @target
+  # synonym to «can attack»; independent of @target
   voltage: ->
     @attacked(true) != UNABLE
 
@@ -153,10 +153,12 @@ class Piece extends Rules
   constructor: (@cons, @color, @queen, @set) ->
     @element()
 
-  @select = (piece) ->
-    piece.element.toggleClass('selected')
-
   piece = $("<div class='piece' />")
+
+  select: ->
+    # Holy balls, javascript allows this without initialization.
+    @selected ^= 1
+    @render()
 
   element: ->
     @element = piece.clone(true).appendTo(Checkers.field)
@@ -167,6 +169,7 @@ class Piece extends Rules
     klass.push "p#{ @cons[1]+1 }"
     klass.push "#{ if @color == WHITE then 'white' else 'black' }"
     klass.push "#{ if @queen then 'queen' else '' }"
+    klass.push "selected" if @selected
     @element.attr('class', klass.join(' '))
 
   render: ->
@@ -249,14 +252,6 @@ class Board extends Moves
       delegate('.piece', 'click', (e) => @pick(e))
     super
 
-  pick: (e) ->
-    e.stopPropagation()
-    select = @pieces.find()
-    target = @pieces.find(e.target)
-
-    if (not select or select.element.is(e.target)) and !!@turn == !!target.color
-      Piece.select(target)
-
   create: ->
     for x in [0..7]
       for y in [0..5]
@@ -266,10 +261,19 @@ class Board extends Moves
             if y > 3 then WHITE else BLACK,
             if Math.random() * 3 > 2 then QUEEN else REGULAR)
 
+  pick: (e) ->
+    e.stopPropagation()
+    select = @pieces.find()
+    target = @pieces.find(e.target)
+
+    if (not select or select.element.is(e.target)) and !!@turn == !!target.color
+      target.select()
+
+  coord: (x, y) ->
+    [Math.floor(x / @unit), Math.floor(y / @unit)]
+
   release: (e) => # Release can be anywhere.
-    x    = Math.floor(e.originalEvent.layerX / @unit)
-    y    = Math.floor(e.originalEvent.layerY / @unit)
-    cons = [x, y]
+    cons = @coord(e.originalEvent.layerX, e.originalEvent.layerY)
     sel  = found = @pieces.find()
     voltaged     = @pieces.voltages(@turn)
     must_move    = _.isEmpty(voltaged) or _(voltaged).contains(sel)
@@ -285,6 +289,7 @@ class Board extends Moves
   put: (piece, type) -> # Put only where cons are valid.
     if type == 'attack' and piece.voltage()
     else
+      piece.select()
       @turn ^= true
       @field.toggleClass('whites-turn blacks-turn')
     @render()
