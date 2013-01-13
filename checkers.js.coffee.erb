@@ -155,31 +155,41 @@ class Piece extends Rules
 
   piece = $("<div class='piece' />")
 
-  select: ->
-    # Holy balls, javascript allows this without initialization.
-    @selected ^= 1
-    @render()
-
-  element: ->
+  element = ->
     @element = piece.clone(true).appendTo(Checkers.field)
+  element: element
 
   classify: ->
     klass = ['piece']
     klass.push "p#{ "hgfedcba"[@cons[0]] }"
     klass.push "p#{ @cons[1]+1 }"
-    klass.push "#{ if @color == WHITE then 'white' else 'black' }"
+    if @color == undefined
+      klass.push 'ghost'
+    else
+      klass.push "#{ if @color == WHITE then 'white' else 'black' }"
     klass.push "#{ if @queen then 'queen' else '' }"
     klass.push "selected" if @selected
     @element.attr('class', klass.join(' '))
 
   render: ->
+    @element = element() unless @element.is("html *")
     @classify()
+
+  select: ->
+    # Holy balls, javascript allows this without initialization.
+    @selected ^= 1
+    @render()
 
   hilight: ->
     @element.addClass('hilight')
 
   terminate: ->
     @element.remove()
+
+class Ghost extends Piece
+  constructor: (cons) ->
+    super(cons)
+    @render()
 
 class Pieces
   array: []
@@ -192,6 +202,17 @@ class Pieces
   new: (args...) ->
     [[x, y], _...] = args
     @array[x][y] = new Piece(args..., this)
+
+  state: (value = null) ->
+    if value
+      @array = value
+      for x in [0..7]
+        for y in [0..7]
+          if (piece = @array[x][y])
+            piece.cons = [x, y]
+    else
+      # Manual deep clone. haha!
+      _.chain(@array).clone().map((a) -> _(a).clone()).value()
 
   remove: (p) ->
     @array[p.cons[X]][p.cons[Y]].terminate()
@@ -206,6 +227,9 @@ class Pieces
 
   list: (fun) ->
     _.chain(@array).flatten().compact().value()
+
+  render: ->
+    _(@list()).invoke('render')
 
   find: (fun = null) ->
     if fun && (target = fun).nodeName
@@ -233,24 +257,45 @@ class Pieces
 
     return moved
 
-class Moves
-  positions: [] # board version list
+class Moves # saves moves to jump back to.
+  constructor: (@pieces) ->
+    @clear()
 
-  constructor: ->
-    @positions.push @pieces
+  add: (cons, state) ->
+    @positions.push [new Ghost(cons), state]
 
-class Board extends Moves
-  pieces: new Pieces
+  rollback: (target) ->
+    if (move = _(@positions).last())
+      [ghost, state] = move
+
+      if ghost.element
+        [ghost, state] = @positions.pop()
+        @pieces.state(state)
+        @pieces.render()
+        ghost.terminate()
+
+  clear: ->
+    if @positions and @positions.length > 0
+      _(@positions).each ([ghost, _]) ->
+        ghost.terminate()
+
+    # position = [[ghost, state], ...]
+    # state doesn't have ghosts in it.
+    @positions = []
+
+class Board
   unit: null # pixels per one square
   turn: WHITE
 
   constructor: (@field, @unit) ->
+    @pieces = new Pieces
+    @moves  = new Moves(@pieces)
     @create()
     @field.
       addClass('whites-turn checkers').
       bind('click', @release).
+      delegate('.ghost', 'click', (e) => @correct(e)).
       delegate('.piece', 'click', (e) => @pick(e))
-    super
 
   create: ->
     for x in [0..7]
@@ -260,6 +305,9 @@ class Board extends Moves
           @pieces.new([x, y],
             if y > 3 then WHITE else BLACK,
             if Math.random() * 3 > 2 then QUEEN else REGULAR)
+
+  correct: (e) ->
+    @moves.rollback(e.target)
 
   pick: (e) ->
     e.stopPropagation()
@@ -275,8 +323,10 @@ class Board extends Moves
   release: (e) => # Release can be anywhere.
     cons = @coord(e.originalEvent.layerX, e.originalEvent.layerY)
     sel  = found = @pieces.find()
+    from = sel.cons
     voltaged     = @pieces.voltages(@turn)
     must_move    = _.isEmpty(voltaged) or _(voltaged).contains(sel)
+    last_state   = @pieces.state()
 
     can = true
     can = can and found
@@ -284,18 +334,20 @@ class Board extends Moves
     _(voltaged).invoke('hilight') if can and !must_move
     can = can and must_move
     can = can and (move = @pieces.move(sel, cons))['valid']
-    @put(sel, move['type']) if can
+    @put(sel, from, last_state, move['type']) if can
 
-  put: (piece, type) -> # Put only where cons are valid.
+  put: (piece, from, last_state, type) -> # Put only where cons are valid.
     if type == 'attack' and piece.voltage()
+      @moves.add(from, last_state)
     else
+      @moves.clear()
       piece.select()
       @turn ^= true
       @field.toggleClass('whites-turn blacks-turn')
-    @render()
+    @pieces.render()
 
   render: ->
-    _(@pieces.list()).invoke('render')
+    @pieces.render()
 
 Game.list.checkers = Checkers =
   init: (@field) ->
