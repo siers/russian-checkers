@@ -323,18 +323,21 @@ class Board
   release: (e) => # Release can be anywhere.
     cons = @coord(e.originalEvent.layerX, e.originalEvent.layerY)
     sel  = found = @pieces.find()
-    from = sel.cons
-    voltaged     = @pieces.voltages(@turn)
-    must_move    = _.isEmpty(voltaged) or _(voltaged).contains(sel)
-    last_state   = @pieces.state()
 
     can = true
     can = can and found
     can = can and !!@turn == !!sel.color
+
+    voltaged  = @pieces.voltages(@turn)
+    must_move = _.isEmpty(voltaged) or _(voltaged).contains(sel)
     _(voltaged).invoke('hilight') if can and !must_move
     can = can and must_move
-    can = can and (move = @pieces.move(sel, cons))['valid']
-    @put(sel, from, last_state, move['type']) if can
+
+    if can
+      from       = sel.cons
+      last_state = @pieces.state()
+      valid      = (move = @pieces.move(sel, cons))['valid']
+      @put(sel, from, last_state, move['type']) if valid
 
   put: (piece, from, last_state, type) -> # Put only where cons are valid.
     if type == 'attack' and piece.voltage()
