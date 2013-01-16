@@ -180,6 +180,9 @@ class Piece extends Rules
     @selected ^= 1
     @render()
 
+  is: (args...) ->
+    @element.is(args...)
+
   hilight: ->
     @element.addClass('hilight')
 
@@ -233,8 +236,8 @@ class Pieces
 
   find: (fun = null) ->
     if fun && (target = fun).nodeName
-      fun = (p) -> p.element.is(target)
-    fun = fun || (p) -> p.element.is('.selected')
+      fun = (p) -> p.is(target)
+    fun = fun || (p) -> p.is('.selected')
     ret = undefined
 
     _(@list()).each (p) ->
@@ -264,11 +267,11 @@ class Moves # saves moves to jump back to.
   add: (cons, state) ->
     @positions.push [new Ghost(cons), state]
 
-  rollback: (target) ->
+  rollback: (cons) ->
     if (move = _(@positions).last())
       [ghost, state] = move
 
-      if ghost.element
+      if true # FIXME: ghost == piece from pieces from cons
         [ghost, state] = @positions.pop()
         @pieces.state(state)
         @pieces.render()
@@ -292,9 +295,9 @@ class Board
     @moves  = new Moves(@pieces)
     @field.
       addClass('whites-turn checkers').
-      bind('click', @release).
-      delegate('.ghost', 'click', (e) => @correct(e)).
-      delegate('.piece', 'click', (e) => @pick(e))
+      on('click',           (e) => @proxy('release', e)).
+      on('click', '.ghost', (e) => @proxy('correct', e)).
+      on('click', '.piece', (e) => @proxy('pick', e))
 
   create: ->
     for x in [0..7]
@@ -305,6 +308,10 @@ class Board
             if y > 3 then WHITE else BLACK,
             if Math.random() * 3 > 2 then QUEEN else REGULAR)
 
+  # Hey there mouse clicks, c'mere you!
+  proxy: (method, data) ->
+    this[method](data)
+
   correct: (e) ->
     @moves.rollback(e.target)
 
@@ -313,7 +320,7 @@ class Board
     select = @pieces.find()
     target = @pieces.find(e.target)
 
-    if (not select or select.element.is(e.target)) and !!@turn == !!target.color
+    if (not select or select.is(e.target)) and !!@turn == !!target.color
       target.select()
 
   coord: (x, y) ->
