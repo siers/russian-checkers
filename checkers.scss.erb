@@ -17,8 +17,10 @@
       }
     }
   }
-  @include turn(white);
-  @include turn(black);
+  &.warm {
+    @include turn(white);
+    @include turn(black);
+  }
 
   .piece {
     position: absolute;

@@ -290,7 +290,6 @@ class Board
   constructor: (@field, @unit) ->
     @pieces = new Pieces
     @moves  = new Moves(@pieces)
-    @create()
     @field.
       addClass('whites-turn checkers').
       bind('click', @release).
@@ -345,17 +344,27 @@ class Board
     else
       @moves.clear()
       piece.select()
-      @turn ^= true
+      @turn   ^= true
+      @frozen ^= true
       @field.toggleClass('whites-turn blacks-turn')
     @pieces.render()
 
   render: ->
+    @field.addClass("warm") unless @frozen
     @pieces.render()
 
 Game.list.checkers = Checkers =
   init: (@field) ->
     @board = new Board(@field, @field.width() / 8)
-    @board.render()
+    Game.dispacher.route 'dice.roll', (data) =>
+      # Gentlemen don't cheat!
+      @board.frozen = @rand > parseFloat(data['roll'])
+      $.log @board.frozen
+      @board.create()
+      @board.render()
+
+  start: ->
+    Game.dispacher.send {type: 'dice.roll', roll: (@rand = Math.random())}
 
   stop: ->
     null
