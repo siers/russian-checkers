@@ -221,12 +221,16 @@ class Pieces
     @array[p.cons[X]][p.cons[Y]].terminate()
     @array[p.cons[X]][p.cons[Y]] = EMPTY
 
-  get: (cons) ->
+  lookup: (cons) ->
+    @get(cons, true)
+
+  get: (cons, silent) ->
     try
       @array[cons[X]][cons[Y]]
     catch e
-      $.log "Error on requesting #{ cons[X] }x#{ cons[Y] } from piece set."
-      throw e
+      unless silent
+        $.log "Error on requesting #{ cons[X] }x#{ cons[Y] } from piece set."
+        throw e
 
   list: (fun) ->
     _.chain(@array).flatten().compact().value()
@@ -336,7 +340,7 @@ class Board
 
   pick: (cons) ->
     select = @pieces.find()
-    target = @pieces.get(cons)
+    target = @pieces.lookup(cons)
 
     if (not select or select == target) and target and !!@turn == !!target.color
       target.select()
