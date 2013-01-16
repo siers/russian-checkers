@@ -304,7 +304,7 @@ class Board
       on('click', '.piece', (e) => @send('pick', e))
 
       Game.dispacher.route 'untrustable.data', (data) =>
-        @delegate(data.method, data.cons)
+        @delegate(data.method, data.cons) if @frozen
 
   create: ->
     for x in [0..7]
@@ -323,8 +323,9 @@ class Board
   send: (method, e) ->
     e.stopPropagation()
     cons = @pieces.find(e.target)?.cons || @coord(e)
-    @delegate(method, cons)
 
+    return if @frozen
+    @delegate(method, cons)
     Game.dispacher.send { type: 'untrustable.data', \
       method: method, cons: cons
     }
@@ -371,7 +372,7 @@ class Board
       piece.select()
       @turn   ^= true
       @frozen ^= true
-      @field.toggleClass('whites-turn blacks-turn')
+      @field.toggleClass('whites-turn blacks-turn warm')
     @pieces.render()
 
   render: ->
@@ -384,7 +385,6 @@ Game.list.checkers = Checkers =
     Game.dispacher.route 'dice.roll', (data) =>
       # Gentlemen don't cheat!
       @board.frozen = @rand > parseFloat(data['roll'])
-      $.log @board.frozen
       @board.create()
       @board.render()
 
