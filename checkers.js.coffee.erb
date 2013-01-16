@@ -308,26 +308,30 @@ class Board
             if y > 3 then WHITE else BLACK,
             if Math.random() * 3 > 2 then QUEEN else REGULAR)
 
-  # Hey there mouse clicks, c'mere you!
-  proxy: (method, data) ->
-    this[method](data)
-
-  correct: (e) ->
-    @moves.rollback(e.target)
-
-  pick: (e) ->
-    e.stopPropagation()
-    select = @pieces.find()
-    target = @pieces.find(e.target)
-
-    if (not select or select.is(e.target)) and !!@turn == !!target.color
-      target.select()
-
-  coord: (x, y) ->
+  coord: (e) ->
+    [x, y] = [e.originalEvent.layerX, e.originalEvent.layerY]
     [Math.floor(x / @unit), Math.floor(y / @unit)]
 
-  release: (e) => # Release can be anywhere.
-    cons = @coord(e.originalEvent.layerX, e.originalEvent.layerY)
+  # Hey there mouse clicks, c'mere you!
+  proxy: (method, e) ->
+    e.stopPropagation()
+    cons = @pieces.find(e.target)?.cons || @coord(e)
+    @send(method, cons)
+
+  send: (method, data) ->
+    this[method](data)
+
+  correct: (cons) ->
+    @moves.rollback(@pieces.get(cons))
+
+  pick: (cons) ->
+    select = @pieces.find()
+    target = @pieces.get(cons)
+
+    if (not select or select == target) and target and !!@turn == !!target.color
+      target.select()
+
+  release: (cons) => # Release can be anywhere.
     sel  = found = @pieces.find()
 
     can = true
