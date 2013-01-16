@@ -295,9 +295,12 @@ class Board
     @moves  = new Moves(@pieces)
     @field.
       addClass('whites-turn checkers').
-      on('click',           (e) => @proxy('release', e)).
-      on('click', '.ghost', (e) => @proxy('correct', e)).
-      on('click', '.piece', (e) => @proxy('pick', e))
+      on('click',           (e) => @send('release', e)).
+      on('click', '.ghost', (e) => @send('correct', e)).
+      on('click', '.piece', (e) => @send('pick', e))
+
+      Game.dispacher.route 'untrustable.data', (data) =>
+        @delegate(data.method, data.cons)
 
   create: ->
     for x in [0..7]
@@ -313,12 +316,19 @@ class Board
     [Math.floor(x / @unit), Math.floor(y / @unit)]
 
   # Hey there mouse clicks, c'mere you!
-  proxy: (method, e) ->
+  send: (method, e) ->
     e.stopPropagation()
     cons = @pieces.find(e.target)?.cons || @coord(e)
-    @send(method, cons)
+    @delegate(method, cons)
 
-  send: (method, data) ->
+    Game.dispacher.send { type: 'untrustable.data', \
+      method: method, cons: cons
+    }
+
+  delegate: (method, data) ->
+    # IT'S OKAY, WE'LL JUST WHITELIST IT AND IT BE SECURE.
+    white = method.match /^release|correct|pick$/
+    return unless white
     this[method](data)
 
   correct: (cons) ->
