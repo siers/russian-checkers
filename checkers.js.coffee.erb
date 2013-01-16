@@ -372,10 +372,11 @@ class Board
       piece.select()
       @turn   ^= true
       @frozen ^= true
-      @field.toggleClass('whites-turn blacks-turn warm')
-    @pieces.render()
+    @render()
 
   render: ->
+    @field.removeClass('whites-turn blacks-turn warm')
+    @field.addClass("#{ if !!@turn == !!WHITE then 'white' else 'black' }s-turn")
     @field.addClass("warm") unless @frozen
     @pieces.render()
 
