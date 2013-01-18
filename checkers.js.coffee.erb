@@ -311,9 +311,7 @@ class Board
       for y in [0..5]
         if Rules.black([x, y])
           y += 2 if y > 2
-          @pieces.new([x, y],
-            if y > 3 then WHITE else BLACK,
-            if Math.random() * 3 > 2 then QUEEN else REGULAR)
+          @pieces.new([x, y], (if y > 3 then WHITE else BLACK), REGULAR)
 
   coord: (e) ->
     [x, y] = [e.originalEvent.layerX, e.originalEvent.layerY]
