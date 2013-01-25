@@ -372,6 +372,10 @@ class Board
       @frozen ^= true
     @render()
 
+  clear: ->
+    _.chain(@pieces.list()).compact().invoke('terminate')
+    @pieces = new Pieces
+
   render: ->
     @field.removeClass('whites-turn blacks-turn warm')
     @field.addClass("#{ if !!@turn == !!WHITE then 'white' else 'black' }s-turn")
@@ -391,4 +395,4 @@ Game.list.checkers = Checkers =
     Game.dispacher.send {type: 'dice.roll', roll: (@rand = Math.random())}
 
   stop: ->
-    null
+    @board.clear()
