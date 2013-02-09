@@ -197,6 +197,7 @@ class Ghost extends Piece
 class Pieces
   array: []
   constructor: ->
+    @array = _(@array).clone()
     for x in [0..7]
       @array.push([])
       for y in [0..7]
@@ -295,8 +296,7 @@ class Board
   turn: WHITE
 
   constructor: (@field, @unit) ->
-    @pieces = new Pieces
-    @moves  = new Moves(@pieces)
+    @clear()
     @field.
       addClass('whites-turn checkers').
       on('click',           (e) => @send('release', e)).
@@ -373,8 +373,11 @@ class Board
     @render()
 
   clear: ->
-    _.chain(@pieces.list()).compact().invoke('terminate')
+    if @pieces
+      _.chain(@pieces.list()).compact().invoke('terminate')
+
     @pieces = new Pieces
+    @moves  = new Moves(@pieces)
 
   render: ->
     @field.removeClass('whites-turn blacks-turn warm')
