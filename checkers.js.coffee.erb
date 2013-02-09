@@ -6,6 +6,9 @@ QUEEN    = true # Must be always true.
 X        = 0
 Y        = 1
 
+flip = (cons) ->
+  [7 - cons[X], 7 - cons[Y]]
+
 # This is a mixin, and rules /logically/ actually extend piece, not vice versa.
 class Rules
   bound = (cons) ->
@@ -161,8 +164,10 @@ class Piece extends Rules
 
   classify: ->
     klass = ['piece']
-    klass.push "p#{ "hgfedcba"[@cons[0]] }"
-    klass.push "p#{ @cons[1]+1 }"
+    cons  = @cons
+    cons  = flip(cons) unless @set.first
+    klass.push "p#{ "hgfedcba"[cons[X]] }"
+    klass.push "p#{ cons[Y] + 1 }"
     if @color == undefined
       klass.push 'ghost'
     else
@@ -272,7 +277,7 @@ class Moves # saves moves to jump back to.
     @clear()
 
   add: (cons, state) ->
-    ghost = new Piece(cons)
+    ghost = new Piece(cons, undefined, REGULAR, @pieces)
     ghost.render()
     @positions.push [ghost, state]
 
@@ -303,7 +308,10 @@ class Board
     @pieces = new Pieces
     @moves  = new Moves(@pieces)
 
-  create: -> @pieces.create()
+  create: ->
+    @first = @turn == WHITE and not @frozen
+    @pieces.first = @first
+    @pieces.create(@first)
 
   delegate: (method, data) ->
     # IT'S OKAY, WE'LL JUST WHITELIST IT AND IT BE SECURE.
@@ -359,7 +367,9 @@ class Board
 class Board_h extends Board
   coord: (e) ->
     [x, y] = [e.originalEvent.layerX, e.originalEvent.layerY]
-    [Math.floor(x / @unit), Math.floor(y / @unit)]
+    cons = [Math.floor(x / @unit), Math.floor(y / @unit)]
+    cons = flip(cons) unless @first
+    cons
 
   constructor: (@field, @unit) ->
     super
