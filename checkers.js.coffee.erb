@@ -299,34 +299,11 @@ class Board
   unit: null # pixels per one square
   turn: WHITE
 
-  constructor: (@field, @unit) ->
+  constructor: ->
     @pieces = new Pieces
     @moves  = new Moves(@pieces)
-    @field.
-      addClass('whites-turn').
-      on('click',           (e) => @send('release', e)).
-      on('click', '.ghost', (e) => @send('correct', e)).
-      on('click', '.piece', (e) => @send('pick', e))
-
-      Game.dispacher.route 'untrustable.data', (data) =>
-        @delegate(data.method, data.cons) if @frozen
 
   create: -> @pieces.create()
-
-  coord: (e) ->
-    [x, y] = [e.originalEvent.layerX, e.originalEvent.layerY]
-    [Math.floor(x / @unit), Math.floor(y / @unit)]
-
-  # Hey there mouse clicks, c'mere you!
-  send: (method, e) ->
-    e.stopPropagation()
-    cons = @pieces.find(e.target)?.cons || @coord(e)
-
-    return if @frozen
-    @delegate(method, cons)
-    Game.dispacher.send { type: 'untrustable.data', \
-      method: method, cons: cons
-    }
 
   delegate: (method, data) ->
     # IT'S OKAY, WE'LL JUST WHITELIST IT AND IT BE SECURE.
@@ -377,6 +354,37 @@ class Board
       _.chain(@pieces.list()).compact().invoke('terminate')
 
   render: ->
+    'wat'
+
+class Board_h extends Board
+  coord: (e) ->
+    [x, y] = [e.originalEvent.layerX, e.originalEvent.layerY]
+    [Math.floor(x / @unit), Math.floor(y / @unit)]
+
+  constructor: (@field, @unit) ->
+    super
+
+    @field.
+      addClass('whites-turn').
+      on('click',           (e) => @send('release', e)).
+      on('click', '.ghost', (e) => @send('correct', e)).
+      on('click', '.piece', (e) => @send('pick', e))
+
+    Game.dispacher.route 'untrustable.data', (data) =>
+      @delegate(data.method, data.cons) if @frozen
+
+  # Hey there mouse clicks, c'mere you!
+  send: (method, e) ->
+    e.stopPropagation()
+    cons = @pieces.find(e.target)?.cons || @coord(e)
+
+    return if @frozen
+    @delegate(method, cons)
+    Game.dispacher.send { type: 'untrustable.data', \
+      method: method, cons: cons
+    }
+
+  render: ->
     @field.removeClass('whites-turn blacks-turn warm')
     @field.addClass("#{ if !!@turn == !!WHITE then 'white' else 'black' }s-turn")
     @field.addClass("warm") unless @frozen
@@ -393,7 +401,7 @@ Game.list.checkers = Checkers =
       @board.render()
 
   new: ->
-    @board = new Board(@field, @field.width() / 8)
+    @board = new Board_h(@field, @field.width() / 8)
 
   start: ->
     Game.dispacher.send {type: 'dice.roll', roll: (@rand = Math.random())}
