@@ -189,11 +189,6 @@ class Piece extends Rules
   terminate: ->
     @element.remove()
 
-class Ghost extends Piece
-  constructor: (cons) ->
-    super(cons)
-    @render()
-
 class Pieces
   array: []
   constructor: ->
@@ -270,7 +265,9 @@ class Moves # saves moves to jump back to.
     @clear()
 
   add: (cons, state) ->
-    @positions.push [new Ghost(cons), state]
+    ghost = new Piece(cons)
+    ghost.render()
+    @positions.push [ghost, state]
 
   rollback: (cons) ->
     if (move = _(@positions).last())
