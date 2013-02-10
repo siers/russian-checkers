@@ -180,9 +180,9 @@ class Piece extends Rules
     @element = element() unless @element.is("html *")
     @classify()
 
-  select: ->
+  select: (value = null) ->
     # Holy balls, javascript allows this without initialization.
-    @selected ^= 1
+    @selected = value ? (@selected ^ 1)
     @render()
 
   is: (args...) ->
@@ -322,8 +322,11 @@ class Board
   correct: (cons) ->
     @moves.rollback(@pieces.get(cons))
 
-  pick: (cons) ->
+  deselect: ->
     @pieces.find()?.select() # Deselect if needed.
+
+  pick: (cons) ->
+    @deselect()
     target = @pieces.lookup(cons)
 
     if target and !!@turn == !!target.color
@@ -341,11 +344,21 @@ class Board
     can = can and must_move
     can
 
-  release: (cons) => # Release can be anywhere.
-    sel = @pieces.find()
+  find: (cons) ->
+    sel       = null
+    plausible = _(@pieces.list()).select (piece) =>
+      return unless @allowed(piece, cons)
+      return unless piece.valid(cons)
+      sel = piece if piece.selected
+      true
 
-    return unless @allowed(sel, cons)
-    return unless sel.valid(cons)
+    return sel if sel
+    plausible[0] if plausible.length == 1
+
+  release: (cons) => # Release can be anywhere.
+    sel = @find(cons)
+
+    return unless sel
 
     from       = sel.cons
     last_state = @pieces.state()
@@ -357,7 +370,7 @@ class Board
       @moves.add(from, last_state)
     else
       @moves.clear()
-      piece.select()
+      @deselect()
       @turn   ^= true
       @frozen ^= true
     @render()
