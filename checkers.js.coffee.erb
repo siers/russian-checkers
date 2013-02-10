@@ -357,6 +357,11 @@ class Board
       @frozen ^= true
     @render()
 
+  won: ->
+    uni = _.chain(@pieces.list()).flatten().compact().pluck('color').uniq().value()
+    return if uni.length != 1
+    uni[0]
+
   clear: ->
     if @pieces
       _.chain(@pieces.list()).compact().invoke('terminate')
@@ -374,8 +379,8 @@ class Board_h extends Board
   constructor: (@field, @unit) ->
     super
 
+    @field.off('click')
     @field.
-      addClass('whites-turn').
       on('click',           (e) => @send('release', e)).
       on('click', '.ghost', (e) => @send('correct', e)).
       on('click', '.piece', (e) => @send('pick', e))
@@ -394,6 +399,18 @@ class Board_h extends Board
       method: method, cons: cons
     }
 
+  delegate: (args...) ->
+    super(args...)
+    return if (color = @won()) == undefined
+
+    # Game has ended.
+    if @first == color
+      text = 'You won!'
+    else
+      text = 'The other party won.'
+    Game.console.log(text)
+    Checkers.restart()
+
   render: ->
     @field.removeClass('whites-turn blacks-turn warm')
     @field.addClass("#{ if !!@turn == !!WHITE then 'white' else 'black' }s-turn")
@@ -405,6 +422,7 @@ Game.list.checkers = Checkers =
     @field.addClass('checkers')
     Game.dispacher.route 'dice.roll', (data) =>
       # Gentlemen don't cheat!
+      @stop()
       @new()
       @board.frozen = @rand > parseFloat(data['roll'])
       @board.create()
@@ -417,4 +435,11 @@ Game.list.checkers = Checkers =
     Game.dispacher.send {type: 'dice.roll', roll: (@rand = Math.random())}
 
   stop: ->
-    @board.clear() if @board
+    @board?.clear()
+    @board = null
+
+  restart: ->
+    fun = =>
+      @start()
+
+    setTimeout(fun, 1500)
