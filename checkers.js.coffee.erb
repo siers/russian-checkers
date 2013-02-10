@@ -323,10 +323,10 @@ class Board
     @moves.rollback(@pieces.get(cons))
 
   pick: (cons) ->
-    select = @pieces.find()
+    @pieces.find()?.select() # Deselect if needed.
     target = @pieces.lookup(cons)
 
-    if (not select or select == target) and target and !!@turn == !!target.color
+    if target and !!@turn == !!target.color
       target.select()
 
   release: (cons) => # Release can be anywhere.
