@@ -399,20 +399,23 @@ class Board_h extends Board
       method: method, cons: cons
     }
 
-  delegate: (args...) ->
-    super(args...)
-    return if (color = @won()) == undefined
-
+  finish: (color) ->
     # Game has ended.
     if @first == color
       text = 'You won!'
     else
       text = 'The other party won.'
     Game.console.log(text)
+    @field.addClass('finish')
     Checkers.restart()
 
+  delegate: (args...) ->
+    super(args...)
+
+    @finish(color) unless (color = @won()) == undefined
+
   render: ->
-    @field.removeClass('whites-turn blacks-turn warm')
+    @field.removeClass('whites-turn blacks-turn warm finish')
     @field.addClass("#{ if !!@turn == !!WHITE then 'white' else 'black' }s-turn")
     @field.addClass("warm") unless @frozen
     @pieces.render()
@@ -444,4 +447,4 @@ Game.list.checkers = Checkers =
     fun = =>
       @start()
 
-    setTimeout(fun, 1500)
+    setTimeout(fun, 2500)
