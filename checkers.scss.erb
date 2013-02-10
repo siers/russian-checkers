@@ -1,7 +1,18 @@
 #space.checkers {
+  perspective-origin: 50% 100%;
+  perspective: 240px;
+  overflow: visible !important;
+}
+
+#space.checkers .checkers {
   height: 480px;
   position: relative;
   background: url(<%= asset_path 'games/checkers/board.png' %>);
+
+  &.dimmensional {
+    transform: rotateX(10deg) translateZ(33px);
+    transform-style: preserve-3d;
+  }
 
   $opa: 0.4;
   @mixin turn($color) {

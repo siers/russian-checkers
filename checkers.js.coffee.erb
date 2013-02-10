@@ -418,8 +418,10 @@ class Board_h extends Board
     @pieces.render()
 
 Game.list.checkers = Checkers =
-  init: (@field) ->
-    @field.addClass('checkers')
+  init: (@container) ->
+    @container.addClass('checkers')
+    @field = $("<div />").appendTo(@container)
+    @field.addClass('checkers dimmensional')
     Game.dispacher.route 'dice.roll', (data) =>
       # Gentlemen don't cheat!
       @stop()
