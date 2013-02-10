@@ -329,23 +329,28 @@ class Board
     if target and !!@turn == !!target.color
       target.select()
 
-  release: (cons) => # Release can be anywhere.
-    sel  = found = @pieces.find()
-
+  # Allowed to move.
+  allowed: (piece, cons) ->
     can = true
-    can = can and found
-    can = can and !!@turn == !!sel.color
+    can = can and piece
+    can = can and !!@turn == !!piece.color
 
     voltaged  = @pieces.voltages(@turn)
-    must_move = _.isEmpty(voltaged) or _(voltaged).contains(sel)
+    must_move = _.isEmpty(voltaged) or _(voltaged).contains(piece)
     _(voltaged).invoke('hilight') if can and !must_move
     can = can and must_move
+    can
 
-    if can
-      from       = sel.cons
-      last_state = @pieces.state()
-      valid      = (move = @pieces.move(sel, cons))['valid']
-      @put(sel, from, last_state, move['type']) if valid
+  release: (cons) => # Release can be anywhere.
+    sel = @pieces.find()
+
+    return unless @allowed(sel, cons)
+    return unless sel.valid(cons)
+
+    from       = sel.cons
+    last_state = @pieces.state()
+    valid      = (move = @pieces.move(sel, cons))['valid']
+    @put(sel, from, last_state, move['type']) if valid
 
   put: (piece, from, last_state, type) -> # Put only where cons are valid.
     if type == 'attack' and piece.voltage()
