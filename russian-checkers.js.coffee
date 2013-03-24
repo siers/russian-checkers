@@ -438,7 +438,7 @@ class Board_h extends Board
     @field.addClass("warm") unless @frozen
     @pieces.render()
 
-Game.list.checkers = Checkers =
+Game.list.russian_checkers = Checkers =
   init: (@container) ->
     @container.addClass('checkers')
     @field = $("<div />").appendTo(@container)
