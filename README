@@ -3,3 +3,10 @@
 - description
     Written for amusement, initially for use within shoo.
     See the code for yourself.
+
+- pitfalls
+    The code's data stored in DOM, and not mirrored, so you can't currently 
+    make the code work without browser or create standalone unittests.
+    Also, the code's a bit too OOPed, which kind of sucks, I should've
+    made it functional and recursive, where possible. I gave these issues
+    a lot of thought and concluded that this code sucks without a refactor.
